@@ -64,26 +64,6 @@ The application estimates the current operational status of wind and solar plant
 -----
 
 
-## Interface Preview
-### **1) Real-Time Grid Analysis**
-The main interface categorizes power by source.
-
-![Interface Preview 1](assets/screenshot1.png)
-
-### **2) Market & Load Forecasting**
-This section visualizes generation and consumption forecasts.
-
-![Interface Preview 2](assets/screenshot2.png)
-
-### **3) Greece Energy Map**
-The **Greece Energy Map** integrates geographical data with live meteorological insights for plants. Hovering over assets displays useful information.
-
-![Interface Preview 3](assets/screenshot3.png)
-
-
------
-
-
 ## Software
 Hellas Grid Monitor is a web-based data dashboard built entirely in Python, accessible through any modern browser without requiring any additional installation beyond the listed dependencies.
 * **Language:** ***Python 3.x***
