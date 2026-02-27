@@ -74,10 +74,13 @@ def get_price_data(start_date, end_date):
     start_time = pd.Timestamp(start_date, tz='Europe/Athens')
     end_time = pd.Timestamp(end_date, tz='Europe/Athens') + timedelta(days=1) - timedelta(seconds=1)
     try:
-        dataFrame_price = ENTSOE_client.query_day_ahead_prices(EIC_GR, start=start_time, end=end_time)    # Variable to store the price data
+        dataFrame_price = ENTSOE_client.query_day_ahead_prices(EIC_GR, start=start_time, end=end_time)
         return dataFrame_price
     except Exception as e:
-        st.error(f"Error fetching price data: {e}")
+        if "503" in str(e):
+            st.warning("⚠️ The ENTSO-E price server is temporarily unavailable (503 Service Unavailable). Please try again in a few minutes.")
+        else:
+            st.error(f"Error fetching price data: {e}")
         return pd.DataFrame()    # Return an empty DataFrame if there's an error
 
 
@@ -123,10 +126,13 @@ def get_generation_forecast(start_date, end_date):
     start_time = pd.Timestamp(start_date, tz='Europe/Athens')
     end_time = pd.Timestamp(end_date, tz='Europe/Athens') + timedelta(days=1) - timedelta(seconds=1)
     try:
-        dataFrame_generation_forecast = ENTSOE_client.query_generation_forecast(EIC_GR, start=start_time, end=end_time)    # Variable to store the generation forecast data
+        dataFrame_generation_forecast = ENTSOE_client.query_generation_forecast(EIC_GR, start=start_time, end=end_time)
         return dataFrame_generation_forecast
     except Exception as e:
-        st.error(f"Error fetching generation forecast data: {e}")
+        if "503" in str(e):
+            st.warning("⚠️ The ENTSO-E forecast server is temporarily unavailable (503 Service Unavailable).")
+        else:
+            st.error(f"Error fetching generation forecast data: {e}")
         return pd.DataFrame()  # Return an empty DataFrame if there's an error
 
 
@@ -137,10 +143,13 @@ def get_consumption_forecast(start_date, end_date):
     start_time = pd.Timestamp(start_date, tz='Europe/Athens')
     end_time = pd.Timestamp(end_date, tz='Europe/Athens') + timedelta(days=1) - timedelta(seconds=1)
     try:
-        dataFrame_consumption_forecast = ENTSOE_client.query_load_forecast(EIC_GR, start=start_time, end=end_time)    # Variable to store the consumption forecast data
+        dataFrame_consumption_forecast = ENTSOE_client.query_load_forecast(EIC_GR, start=start_time, end=end_time)
         return dataFrame_consumption_forecast
     except Exception as e:
-        st.error(f"Error fetching consumption forecast data: {e}")
+        if "503" in str(e):
+            st.warning("⚠️ The ENTSO-E load forecast server is temporarily unavailable (503 Service Unavailable).")
+        else:
+            st.error(f"Error fetching consumption forecast data: {e}")
         return pd.DataFrame()  # Return an empty DataFrame if there's an error
 
 
