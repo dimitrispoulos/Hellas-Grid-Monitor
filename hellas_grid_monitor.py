@@ -174,6 +174,10 @@ with box3:
     with col_2:
         end_date = st.date_input("End Date: ", value=default_end_date, max_value=today)
 
+    if start_date > end_date:
+        st.sidebar.error("⚠️ Error: Start Date must be before or equal to End Date.")
+        st.stop()
+
 
 dataFrame_generation, latest_value, data_time = get_generation_data(start_date=start_date, end_date=end_date)
 
