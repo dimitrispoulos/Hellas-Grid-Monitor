@@ -24,7 +24,7 @@ OWM_token = st.secrets["OWM_token"]
 
 
 
-st.set_page_config(page_title="Hellas Grid Monitor", layout="wide", initial_sidebar_state="expanded")    # Sets the page title and layout
+st.set_page_config(page_title="Hellas Grid Monitor", page_icon="icon.png", layout="wide", initial_sidebar_state="expanded")    # Sets the page title and layout
 
 
 
@@ -50,7 +50,7 @@ def get_generation_data(start_date, end_date):
     start_time = pd.Timestamp(start_date, tz='Europe/Athens')    # Converts the input start date to a pandas Timestamp with the Greek timezone
     end_time = pd.Timestamp(end_date, tz='Europe/Athens') + timedelta(days=1) - timedelta(seconds=1)    # Converts end date to Timestamp and sets the time to the last second of the day
     dataFrame_generation = ENTSOE_client.query_generation(EIC_GR, start=start_time, end=end_time)    # Variable to store the generation data
-    last_row = dataFrame_generation.dropna().iloc[-1]    # Removes any rows with missing data and extracts the very last row (the most recent data)
+    last_row = dataFrame_generation.ffill(limit=2).dropna().iloc[-1]    # Removes any rows with missing data and extracts the very last row (the most recent data)
     data_time = last_row.name
     latest_value = last_row.rename_axis('Source').reset_index(name='MW')    # Formats the extracted row into a clean DataFrame
     
@@ -256,6 +256,7 @@ st.sidebar.progress(int(natural_gas_percentage))
 
 st.markdown("<h1 style='text-align: center; font-size: 60px;'>Hellas Grid Monitor</h1>", unsafe_allow_html=True)    # Enable HTML parsing (unsafe_allow_html) to apply custom CSS for title
 st.markdown("### Real-time Power Generation")
+st.caption(data_time.strftime('%B %d, %Y'))
 
 col1, col2, col3 = st.columns(3)    # Creates 3 columns for data
 with col1.container(border=True):
@@ -343,7 +344,7 @@ with tab2:
     fig_area = px.area(
         dataFrame_generation.fillna(0), 
         labels={'value': 'MW', 'index': 'Time'},
-        title="Evolution of Generation per Source (Last 24h)",
+        title="Evolution of Generation per Source",
         color_discrete_map=color_mapping
     )
     # Display optimization
