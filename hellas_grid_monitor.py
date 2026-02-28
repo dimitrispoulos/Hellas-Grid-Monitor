@@ -348,7 +348,6 @@ with tab2:
     )
     # Display optimization
     fig_area.update_layout(legend_title_text='Energy Source', xaxis_title="Time", yaxis_title="Power (MW)")
-    fig_area.update_xaxes(tickformat="%H:%M")
     st.plotly_chart(fig_area, use_container_width=True)
     # Displays the data table
     with st.expander("See Data Table"):
