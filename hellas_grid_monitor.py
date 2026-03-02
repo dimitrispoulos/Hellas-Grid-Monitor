@@ -24,7 +24,7 @@ OWM_token = st.secrets["OWM_token"]
 
 
 
-st.set_page_config(page_title="Hellas Grid Monitor", page_icon="icon.png", layout="wide", initial_sidebar_state="expanded")    # Sets the page title and layout
+st.set_page_config(page_title="Hellas Grid Monitor", page_icon="icon.png", layout="wide", initial_sidebar_state="collapsed")    # Sets the page title and layout
 
 
 
