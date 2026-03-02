@@ -73,14 +73,11 @@ def get_consumption_data(start_date, end_date):
 def get_price_data(start_date, end_date):
     start_time = pd.Timestamp(start_date, tz='Europe/Athens')
     end_time = pd.Timestamp(end_date, tz='Europe/Athens') + timedelta(days=1) - timedelta(seconds=1)
+    
     try:
         dataFrame_price = ENTSOE_client.query_day_ahead_prices(EIC_GR, start=start_time, end=end_time)
         return dataFrame_price
-    except Exception as e:
-        if "503" in str(e):
-            st.warning("⚠️ The ENTSO-E price server is temporarily unavailable (503 Service Unavailable). Please try again in a few minutes.")
-        else:
-            st.error(f"Error fetching price data: {e}")
+    except:
         return pd.DataFrame()    # Return an empty DataFrame if there's an error
 
 
