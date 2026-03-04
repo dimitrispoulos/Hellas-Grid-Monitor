@@ -64,13 +64,13 @@ The application estimates the current operational status of wind and solar plant
 -----
 
 
-### Interface Preview Examples
-1) **Main Dashboard Overview:**
+## Interface Preview Examples
+### 1) **Main Dashboard Overview:**
 The primary dashboard interface, providing a real-time overview of Greece's energy generation mix.
 
 ![Hellas Grid Monitor Dashboard](assets/screenshot1.png)
 
-2) **Energy Map Overview:**
+### 2) **Energy Map Overview:**
 The interactive energy map, visualizing the geographical distribution of major power plants across Greece along with live weather data.
 
 ![Greece Energy Map](assets/screenshot3.png)
@@ -147,5 +147,6 @@ MIT License: Free to use, modify, and distribute with attribution.
 ## **Developer**
 **Dimitrios Poulos** <br>
 *Electrical \& Computer Engineering Student*
+
 
 * **Release Date:** February 2026
