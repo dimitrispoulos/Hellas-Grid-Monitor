@@ -47,14 +47,23 @@ color_mapping = {
 # Function to load generation data
 @st.cache_data(ttl=900)    # Caches the API response for 15 minutes (900 seconds) to prevent issues with the API
 def get_generation_data(start_date, end_date):
-    start_time = pd.Timestamp(start_date, tz='Europe/Athens')    # Converts the input start date to a pandas Timestamp with the Greek timezone
-    end_time = pd.Timestamp(end_date, tz='Europe/Athens') + timedelta(days=1) - timedelta(seconds=1)    # Converts end date to Timestamp and sets the time to the last second of the day
-    dataFrame_generation = ENTSOE_client.query_generation(EIC_GR, start=start_time, end=end_time)    # Variable to store the generation data
-    last_row = dataFrame_generation.ffill(limit=2).dropna().iloc[-1]    # Removes any rows with missing data and extracts the very last row (the most recent data)
-    data_time = last_row.name
-    latest_value = last_row.rename_axis('Source').reset_index(name='MW')    # Formats the extracted row into a clean DataFrame
-    
-    return dataFrame_generation, latest_value, data_time
+    try:
+        start_time = pd.Timestamp(start_date, tz='Europe/Athens')    # Converts the input start date to a pandas Timestamp with the Greek timezone
+        end_time = pd.Timestamp(end_date, tz='Europe/Athens') + timedelta(days=1) - timedelta(seconds=1)    # Converts end date to Timestamp and sets the time to the last second of the day
+        
+        dataFrame_generation = ENTSOE_client.query_generation(EIC_GR, start=start_time, end=end_time)    # Variable to store the generation data
+        last_row = dataFrame_generation.ffill(limit=2).dropna().iloc[-1]    # Removes any rows with missing data and extracts the very last row (the most recent data)
+        data_time = last_row.name
+        
+        latest_value = last_row.squeeze().rename_axis('Source').reset_index(name='MW')    # Formats the extracted row into a clean DataFrame
+        
+        return dataFrame_generation, latest_value, data_time
+        
+    except Exception as e:
+        st.error(f"Connection failed with ENTSO-E: {e}")
+        empty_latest = pd.DataFrame(columns=['Source', 'MW'])
+        return pd.DataFrame(), empty_latest, pd.Timestamp.now(tz='Europe/Athens')
+
 
 
 
