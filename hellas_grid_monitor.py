@@ -52,13 +52,16 @@ def get_generation_data(start_date, end_date):
         end_time = pd.Timestamp(end_date, tz='Europe/Athens') + timedelta(days=1) - timedelta(seconds=1)    # Converts end date to Timestamp and sets the time to the last second of the day
         
         dataFrame_generation = ENTSOE_client.query_generation(EIC_GR, start=start_time, end=end_time)    # Variable to store the generation data
+        
+        # FIX: Flatten MultiIndex columns if the API returns them
+        if isinstance(dataFrame_generation.columns, pd.MultiIndex):
+            dataFrame_generation.columns = dataFrame_generation.columns.get_level_values(-1)
+            
         last_row = dataFrame_generation.ffill(limit=2).dropna().iloc[-1]    # Removes any rows with missing data and extracts the very last row (the most recent data)
         data_time = last_row.name
         
-        latest_value = pd.DataFrame({
-            'Source': last_row.index.get_level_values(-1),
-            'MW': last_row.values
-        })    # Formats the extracted row into a clean DataFrame by safely extracting the source names
+        # Safe extraction since columns are now flat
+        latest_value = last_row.squeeze().rename_axis('Source').reset_index(name='MW')    # Formats the extracted row into a clean DataFrame
         
         return dataFrame_generation, latest_value, data_time
         
