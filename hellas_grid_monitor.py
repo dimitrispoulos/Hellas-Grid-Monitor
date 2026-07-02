@@ -326,7 +326,7 @@ with tab1:
             )
             st.plotly_chart(pie_chart, use_container_width=True)
         else:
-            st.warning("⚠️ No generation data available to display the chart.")
+            st.warning("No generation data available to display the chart.")
 
 
     # Right column for network analysis and recommendations
@@ -390,7 +390,7 @@ with tab2:
             display_dataFrame_generation.index = display_dataFrame_generation.index.strftime('%Y-%m-%d %H:%M')    # Date formatting
             st.dataframe(display_dataFrame_generation, use_container_width=True)
     else:
-        st.warning("⚠️ No generation trend data available due to API failure.")
+        st.warning("No generation trend data available due to API failure.")
     
 
     st.markdown("-----")
