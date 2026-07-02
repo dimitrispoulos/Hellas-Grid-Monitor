@@ -55,14 +55,18 @@ def get_generation_data(start_date, end_date):
         last_row = dataFrame_generation.ffill(limit=2).dropna().iloc[-1]    # Removes any rows with missing data and extracts the very last row (the most recent data)
         data_time = last_row.name
         
-        latest_value = last_row.squeeze().rename_axis('Source').reset_index(name='MW')    # Formats the extracted row into a clean DataFrame
+        latest_value = pd.DataFrame({
+            'Source': last_row.index.get_level_values(-1),
+            'MW': last_row.values
+        })    # Formats the extracted row into a clean DataFrame by safely extracting the source names
         
         return dataFrame_generation, latest_value, data_time
         
     except Exception as e:
-        st.error(f"Connection failed with ENTSO-E: {e}")
-        empty_latest = pd.DataFrame(columns=['Source', 'MW'])
-        return pd.DataFrame(), empty_latest, pd.Timestamp.now(tz='Europe/Athens')
+        st.error(f"Failed to connect with ENTSO-E and fetch generation data: {e}")    # Prevents app from crashing if API connection fails
+        empty_latest = pd.DataFrame(columns=['Source', 'MW'])    # Creates an empty DataFrame structure
+        return pd.DataFrame(), empty_latest, pd.Timestamp.now(tz='Europe/Athens')    # Returns empty DataFrames to keep the dashboard running smoothly
+
 
 
 
