@@ -45,6 +45,7 @@ color_mapping = {
 
 # Data fetching functions
 # Function to load generation data
+# Function to load generation data
 @st.cache_data(ttl=900)    # Caches the API response for 15 minutes (900 seconds) to prevent issues with the API
 def get_generation_data(start_date, end_date):
     try:
@@ -53,24 +54,27 @@ def get_generation_data(start_date, end_date):
         
         dataFrame_generation = ENTSOE_client.query_generation(EIC_GR, start=start_time, end=end_time)    # Variable to store the generation data
         
-        # FIX: Flatten MultiIndex columns if the API returns them
         if isinstance(dataFrame_generation.columns, pd.MultiIndex):
-            dataFrame_generation.columns = dataFrame_generation.columns.get_level_values(-1)
+            # Keep only Generation (Aggregated) and drop Consumption (Pumped/Storage charging)
+            gen_cols = [col for col in dataFrame_generation.columns if 'Aggregated' in str(col[1])]
+            if gen_cols:
+                dataFrame_generation = dataFrame_generation[gen_cols]
+            dataFrame_generation.columns = dataFrame_generation.columns.get_level_values(0)
+            
+        # Absolute guarantee that no duplicate column names remain
+        dataFrame_generation = dataFrame_generation.loc[:, ~dataFrame_generation.columns.duplicated()]
             
         last_row = dataFrame_generation.ffill(limit=2).dropna().iloc[-1]    # Removes any rows with missing data and extracts the very last row (the most recent data)
         data_time = last_row.name
         
-        # Safe extraction since columns are now flat
         latest_value = last_row.squeeze().rename_axis('Source').reset_index(name='MW')    # Formats the extracted row into a clean DataFrame
         
         return dataFrame_generation, latest_value, data_time
         
     except Exception as e:
-        st.error(f"Failed to connect with ENTSO-E and fetch generation data: {e}")    # Prevents app from crashing if API connection fails
-        empty_latest = pd.DataFrame(columns=['Source', 'MW'])    # Creates an empty DataFrame structure
-        return pd.DataFrame(), empty_latest, pd.Timestamp.now(tz='Europe/Athens')    # Returns empty DataFrames to keep the dashboard running smoothly
-
-
+        st.error(f"Failed to connect with ENTSO-E API to fetch generation data: {e}")
+        empty_latest = pd.DataFrame(columns=['Source', 'MW'])
+        return pd.DataFrame(), empty_latest, pd.Timestamp.now(tz='Europe/Athens')
 
 
 
@@ -79,9 +83,12 @@ def get_generation_data(start_date, end_date):
 def get_consumption_data(start_date, end_date):
     start_time = pd.Timestamp(start_date, tz='Europe/Athens')
     end_time = pd.Timestamp(end_date, tz='Europe/Athens') + timedelta(days=1) - timedelta(seconds=1)
-    dataFrame_consumption = ENTSOE_client.query_load(EIC_GR, start=start_time, end=end_time)    # Variable to store the consumption data
-    
-    return dataFrame_consumption
+    try:
+        dataFrame_consumption = ENTSOE_client.query_load(EIC_GR, start=start_time, end=end_time)    # Variable to store the consumption data
+        return dataFrame_consumption
+    except Exception as e:
+        st.error(f"Failed to connect with ENTSO-E API to fetch consumption data: {e}")
+        return pd.DataFrame()
 
 
 
@@ -129,6 +136,7 @@ def get_weather_data(lat, lon, plant_type):
         return weather_info, status
     
     except Exception as e:
+        st.error(f"Failed to fetch weather data: {e}")
         return "-", "-"
 
 
@@ -143,9 +151,9 @@ def get_generation_forecast(start_date, end_date):
         return dataFrame_generation_forecast
     except Exception as e:
         if "503" in str(e):
-            st.warning("⚠️ The ENTSO-E forecast server is temporarily unavailable (503 Service Unavailable).")
+            st.warning("The ENTSO-E forecast server is temporarily unavailable (503 Service Unavailable).")
         else:
-            st.error(f"Error fetching generation forecast data: {e}")
+            st.error(f"Failed to connect with ENTSO-E API to fetch generation forecast data: {e}")
         return pd.DataFrame()  # Return an empty DataFrame if there's an error
 
 
@@ -160,7 +168,7 @@ def get_consumption_forecast(start_date, end_date):
         return dataFrame_consumption_forecast
     except Exception as e:
         if "503" in str(e):
-            st.warning("⚠️ The ENTSO-E load forecast server is temporarily unavailable (503 Service Unavailable).")
+            st.warning("The ENTSO-E load forecast server is temporarily unavailable (503 Service Unavailable).")
         else:
             st.error(f"Error fetching consumption forecast data: {e}")
         return pd.DataFrame()  # Return an empty DataFrame if there's an error
@@ -188,7 +196,7 @@ with box3:
         end_date = st.date_input("End Date: ", value=default_end_date, max_value=today)
 
     if start_date > end_date:
-        st.sidebar.error("⚠️ Error: Start Date must be before or equal to End Date.")
+        st.sidebar.error("Error: Start Date must be before or equal to End Date.")
         st.stop()
 
 
@@ -235,19 +243,26 @@ st.sidebar.markdown("-----")
 
 total_generation_MW = latest_value['MW'].sum()    # Variable to store the total generation in MW (Active Power)
 
-renewable_generation = ['Wind Onshore', 'Solar', 'Hydro Water Reservoir', 'Biomass']    # List of renewable energy sources
-renewable_generation_MW = latest_value[latest_value['Source'].isin(renewable_generation)]['MW'].sum()    # Variable to store the total renewable generation in MW (Active Power)
-renewable_percentage = (renewable_generation_MW/total_generation_MW)*100    # Variable to store the percentage of renewable generation in relation to total generation
+# Security check to prevent ZeroDivisionError if DataFrame is empty
+if total_generation_MW > 0:
+    renewable_generation = ['Wind Onshore', 'Solar', 'Hydro Water Reservoir', 'Biomass']    # List of renewable energy sources
+    renewable_generation_MW = latest_value[latest_value['Source'].isin(renewable_generation)]['MW'].sum()    # Variable to store the total renewable generation in MW (Active Power)
+    renewable_percentage = (renewable_generation_MW/total_generation_MW)*100    # Variable to store the percentage of renewable generation in relation to total generation
 
+    lignite_generation_MW = latest_value[latest_value['Source']=='Fossil Brown coal/Lignite']['MW'].sum()    # Variable to store the lignite generation in MW (Active Power)
+    lignite_percentage = (lignite_generation_MW/total_generation_MW)*100    # Variable to store the percentage of lignite generation in relation to total generation
 
-lignite_generation_MW = latest_value[latest_value['Source']=='Fossil Brown coal/Lignite']['MW'].sum()    # Variable to store the lignite generation in MW (Active Power)
-lignite_percentage = (lignite_generation_MW/total_generation_MW)*100    # Variable to store the percentage of lignite generation in relation to total generation
+    natural_gas_generation_MW = latest_value[latest_value['Source']=='Fossil Gas']['MW'].sum()    # Variable to store the natural gas generation in MW (Active Power)
+    natural_gas_percentage = (natural_gas_generation_MW/total_generation_MW)*100    # Variable to store the percentage of natural gas generation in relation to total generation
 
-natural_gas_generation_MW = latest_value[latest_value['Source']=='Fossil Gas']['MW'].sum()    # Variable to store the natural gas generation in MW (Active Power)
-natural_gas_percentage = (natural_gas_generation_MW/total_generation_MW)*100    # Variable to store the percentage of natural gas generation in relation to total generation
-
-co2_emissions = ((lignite_generation_MW*1000) + (natural_gas_generation_MW*400)) / total_generation_MW    # Variable to store the average CO2 emissions in kg/MWh, assuming lignite emits 1000 kg/MWh and natural gas emits 400 kg/MWh
-co2_emissions_percentage = (co2_emissions/1000)*100    # Variable to store the CO2 emissions as a percentage of 1000 kg/MWh for the progress bar
+    co2_emissions = ((lignite_generation_MW*1000) + (natural_gas_generation_MW*400)) / total_generation_MW    # Variable to store the average CO2 emissions in kg/MWh, assuming lignite emits 1000 kg/MWh and natural gas emits 400 kg/MWh
+    co2_emissions_percentage = (co2_emissions/1000)*100    # Variable to store the CO2 emissions as a percentage of 1000 kg/MWh for the progress bar
+else:
+    renewable_percentage = 0.0
+    lignite_percentage = 0.0
+    natural_gas_percentage = 0.0
+    co2_emissions = 0.0
+    co2_emissions_percentage = 0.0
 
 
 
@@ -255,13 +270,13 @@ co2_emissions_percentage = (co2_emissions/1000)*100    # Variable to store the C
 st.sidebar.markdown("#### Quick Live Mix Overview")
 st.sidebar.markdown(f"⚡ **Total Generation:** {total_generation_MW:.1f} MW")
 st.sidebar.markdown(f"🌿 **Renewable Energy:** {renewable_percentage:.1f}%")
-st.sidebar.progress(int(renewable_percentage))
+st.sidebar.progress(int(max(0, min(100, renewable_percentage))))
 st.sidebar.markdown(f"⚫ **CO2 Emissions:** {co2_emissions:.1f} kg/MWh")
-st.sidebar.progress(int(co2_emissions_percentage))
+st.sidebar.progress(int(max(0, min(100, co2_emissions_percentage))))
 st.sidebar.markdown(f"🏭 **Lignite:** {lignite_percentage:.1f}%")
-st.sidebar.progress(int(lignite_percentage))
+st.sidebar.progress(int(max(0, min(100, lignite_percentage))))
 st.sidebar.markdown(f"🔥 **Natural Gas:** {natural_gas_percentage:.1f}%")
-st.sidebar.progress(int(natural_gas_percentage))
+st.sidebar.progress(int(max(0, min(100, natural_gas_percentage))))
 
 
 
@@ -302,13 +317,16 @@ with tab1:
     # Left column for generation pie chart
     with col_left:
         st.markdown(f"#### Power Generation by Source")
-        pie_chart = px.pie(latest_value, values='MW', names='Source', color='Source',color_discrete_map=color_mapping, title=f"Live Generation Mix ({data_time.strftime('%H:%M')})", hole=0.2)
-        pie_chart.update_layout(
-            height=400,
-            margin=dict(l=10, r=10, t=50, b=10),
-            legend=dict(orientation="h", yanchor="top", y=-0.2, xanchor="center", x=0.5)
-        )
-        st.plotly_chart(pie_chart, use_container_width=True)
+        if not latest_value.empty and total_generation_MW > 0:
+            pie_chart = px.pie(latest_value, values='MW', names='Source', color='Source',color_discrete_map=color_mapping, title=f"Live Generation Mix ({data_time.strftime('%H:%M')})", hole=0.2)
+            pie_chart.update_layout(
+                height=400,
+                margin=dict(l=10, r=10, t=50, b=10),
+                legend=dict(orientation="h", yanchor="top", y=-0.2, xanchor="center", x=0.5)
+            )
+            st.plotly_chart(pie_chart, use_container_width=True)
+        else:
+            st.warning("⚠️ No generation data available to display the chart.")
 
 
     # Right column for network analysis and recommendations
@@ -352,22 +370,27 @@ with tab1:
 # Tab 2: Analysis of grid in a 24-hours period
 with tab2:
     st.markdown("### 24-Hour Generation Trend (MW)", help="Evolution of power generation by energy source over the last 24 hours.")
-    # The entire dataFrame_generation is used because it contains 24-hour data
-    # fillna(0) ensures that there are no gaps in the graph
-    fig_area = px.area(
-        dataFrame_generation.fillna(0), 
-        labels={'value': 'MW', 'index': 'Time'},
-        title="Evolution of Generation per Source",
-        color_discrete_map=color_mapping
-    )
-    # Display optimization
-    fig_area.update_layout(legend_title_text='Energy Source', xaxis_title="Time", yaxis_title="Power (MW)")
-    st.plotly_chart(fig_area, use_container_width=True)
-    # Displays the data table
-    with st.expander("See Data Table"):
-        display_dataFrame_generation = dataFrame_generation.copy()
-        display_dataFrame_generation.index = display_dataFrame_generation.index.strftime('%Y-%m-%d %H:%M')    # Date formatting
-        st.dataframe(display_dataFrame_generation, use_container_width=True)
+    
+    if not dataFrame_generation.empty:
+        # FIX: Double check for unique columns before plotting to prevent Plotly DuplicateError
+        plot_df = dataFrame_generation.loc[:, ~dataFrame_generation.columns.duplicated()].copy()
+
+        fig_area = px.area(
+            plot_df.fillna(0), 
+            labels={'value': 'MW', 'index': 'Time'},
+            title="Evolution of Generation per Source",
+            color_discrete_map=color_mapping
+        )
+        # Display optimization
+        fig_area.update_layout(legend_title_text='Energy Source', xaxis_title="Time", yaxis_title="Power (MW)")
+        st.plotly_chart(fig_area, use_container_width=True)
+        # Displays the data table
+        with st.expander("See Data Table"):
+            display_dataFrame_generation = plot_df.copy()
+            display_dataFrame_generation.index = display_dataFrame_generation.index.strftime('%Y-%m-%d %H:%M')    # Date formatting
+            st.dataframe(display_dataFrame_generation, use_container_width=True)
+    else:
+        st.warning("⚠️ No generation trend data available due to API failure.")
     
 
     st.markdown("-----")
