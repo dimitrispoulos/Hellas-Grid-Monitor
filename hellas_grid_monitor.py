@@ -509,6 +509,7 @@ with tab3:
                                 size_max=15,
                                 zoom=5,
                                 height=500,
+                                center={"lat": 38, "lon": 22},
                                 hover_name="Name",
                                 custom_data = ["Operator", "Capacity (MW)", "Live Weather", "Status", "Description"],
                                 map_style=map_style)
