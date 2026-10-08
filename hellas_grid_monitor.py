@@ -16,11 +16,13 @@ import requests    # Used for making HTTP requests (in our case to the OpenWeath
 
 
 # API Configuration
-ENTSOE_token = st.secrets["ENTSOE_token"]
+ENTSOE_token = st.secrets["ENTSOE_token"]    # Token for ENTSO-E Transparency Platform API (used for grid data)
 ENTSOE_client = EntsoePandasClient(api_key=ENTSOE_token)
 EIC_GR = "10YGR-HTSO-----Y"    # EIC code for Greece
 
-OWM_token = st.secrets["OWM_token"]
+OWM_token = st.secrets["OWM_token"]    # Token for OpenWeatherMap API (used for weather data)
+
+CARTO_token = st.secrets["CARTO_token"]    # Token for Carto API (used for map visualization)
 
 
 
@@ -240,14 +242,14 @@ co2_emissions_percentage = (co2_emissions/1000)*100    # Variable to store the C
 
 
 st.sidebar.markdown("#### Quick Live Mix Overview")
-st.sidebar.markdown(f"⚡ **Total Generation:** {total_generation_MW:.1f} MW")
-st.sidebar.markdown(f"🌿 **Renewable Energy:** {renewable_percentage:.1f}%")
+st.sidebar.markdown(f"**Total Generation:** {total_generation_MW:.1f} MW")
+st.sidebar.markdown(f"**Renewable Energy:** {renewable_percentage:.1f}%")
 st.sidebar.progress(int(renewable_percentage))
-st.sidebar.markdown(f"⚫ **CO2 Emissions:** {co2_emissions:.1f} kg/MWh")
+st.sidebar.markdown(f"**CO2 Emissions:** {co2_emissions:.1f} kg/MWh")
 st.sidebar.progress(int(co2_emissions_percentage))
-st.sidebar.markdown(f"🏭 **Lignite:** {lignite_percentage:.1f}%")
+st.sidebar.markdown(f"**Lignite:** {lignite_percentage:.1f}%")
 st.sidebar.progress(int(lignite_percentage))
-st.sidebar.markdown(f"🔥 **Natural Gas:** {natural_gas_percentage:.1f}%")
+st.sidebar.markdown(f"**Natural Gas:** {natural_gas_percentage:.1f}%")
 st.sidebar.progress(int(natural_gas_percentage))
 
 
@@ -492,13 +494,14 @@ with tab3:
                                 options=["Light Mode", "Satellite", "Dark Mode"],
                                 horizontal=True)
     if map_style_choice == "Light Mode":
-        mapbox_style = "carto-positron"
+        map_style = f"https://basemaps.cartocdn.com/gl/positron-gl-style/style.json?key={CARTO_token}"
     elif map_style_choice == "Satellite":
-        mapbox_style = "open-street-map"
-    else:    mapbox_style = "carto-darkmatter"
+        map_style = "open-street-map"
+    else:
+        map_style = f"https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json?key={CARTO_token}"
 
     # Scatter Mapbox configuration with custom_data for interactive hover tooltips
-    fig_map = px.scatter_mapbox(map_locations,
+    fig_map = px.scatter_map(map_locations,
                                 lat="Lat",
                                 lon="Lon",
                                 color="Type",
@@ -507,9 +510,10 @@ with tab3:
                                 zoom=5,
                                 height=500,
                                 hover_name="Name",
-                                custom_data = ["Operator", "Capacity (MW)", "Live Weather", "Status", "Description"])
+                                custom_data = ["Operator", "Capacity (MW)", "Live Weather", "Status", "Description"],
+                                map_style=map_style)
 
-    fig_map.update_layout(mapbox_style=mapbox_style, margin={"r":0,"t":50,"l":0,"b":0}, legend_title_text='Energy Type')
+    fig_map.update_layout(mapbox_style=map_style, margin={"r":0,"t":50,"l":0,"b":0}, legend_title_text='Energy Type')
     # Custom hover template to display data of plants
     fig_map.update_traces(marker=dict(size=12), hovertemplate=("<b>%{hovertext}</b><br>" +
                                                         "Operator: %{customdata[0]}<br>" +
