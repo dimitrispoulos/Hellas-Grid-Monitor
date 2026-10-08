@@ -513,7 +513,7 @@ with tab3:
                                 custom_data = ["Operator", "Capacity (MW)", "Live Weather", "Status", "Description"],
                                 map_style=map_style)
 
-    fig_map.update_layout(mapbox_style=map_style, margin={"r":0,"t":50,"l":0,"b":0}, legend_title_text='Energy Type')
+    fig_map.update_layout(margin={"r":0,"t":50,"l":0,"b":0}, legend_title_text='Energy Type')
     # Custom hover template to display data of plants
     fig_map.update_traces(marker=dict(size=12), hovertemplate=("<b>%{hovertext}</b><br>" +
                                                         "Operator: %{customdata[0]}<br>" +
