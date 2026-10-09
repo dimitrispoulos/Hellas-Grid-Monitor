@@ -10,4 +10,4 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Ping the Streamlit App
-        run: curl -sL https://hellas-grid-monitor-8crhzwsrk3526nxeuoxdni.streamlit.app/ > /dev/null
+        run: curl -s https://hellas-grid-monitor-8crhzwsrk3526nxeuoxdni.streamlit.app/ > /dev/null
