@@ -12,4 +12,4 @@ jobs:
       - name: Ping the Streamlit App as a Browser
         run: |
           curl -A "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36" \
-               -sL https://hellas-grid-monitor-8crhzwsrk3526nxeuoxdni.streamlit.app/ > /dev/null
+               -s https://hellas-grid-monitor-8crhzwsrk3526nxeuoxdni.streamlit.app/ > /dev/null
